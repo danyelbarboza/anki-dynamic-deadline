@@ -401,9 +401,19 @@ def _set_this_deck_new_limit(deck: Dict[str, Any], new_limit: int) -> None:
     In current Anki versions, this limit is stored on the deck itself, separate
     from the options preset. In the legacy deck JSON, the field is `newLimit`,
     corresponding to `Deck.Normal.new_limit` in the backend.
+
+    Important: use `decks.save(deck)`, not `decks.update(deck)`.
+    `update()` preserves the deck's USN/mtime by default, which can make the
+    change visible locally on desktop but not marked as a syncable change.
+    `save()` calls `update(..., preserve_usn=False)`, so AnkiWeb/mobile clients
+    can receive the updated daily limit after sync.
     """
     deck["newLimit"] = int(max(0, new_limit))
-    mw.col.decks.update(deck)
+    try:
+        mw.col.decks.save(deck)
+    except Exception:
+        # Fallback for unusual builds/versions: explicitly avoid preserving USN.
+        mw.col.decks.update(deck, preserve_usn=False)
 
 
 def _current_this_deck_new_limit(deck: Dict[str, Any]) -> Optional[int]:
