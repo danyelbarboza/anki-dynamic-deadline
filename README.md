@@ -33,6 +33,8 @@ It does **not** create or rename option presets.
   - English
   - Portuguese
 
+<img src="screenshots/config-window.png" alt="Configuration window" width="700">
+
 ---
 
 ## Why this add-on exists
@@ -190,17 +192,6 @@ New cards/day > This deck
 It does not modify the shared option preset's global new-card limit.
 
 This is intentional. It avoids changing other decks that may use the same preset.
-
----
-
-## Screenshots
-
-
-Example:
-
-```markdown
-![Configuration window](screenshots/config-window.png)
-```
 
 ---
 
