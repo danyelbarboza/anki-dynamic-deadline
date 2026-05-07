@@ -398,22 +398,37 @@ def _format_percent(value: float) -> str:
 def _set_this_deck_new_limit(deck: Dict[str, Any], new_limit: int) -> None:
     """Set the New cards/day limit in the "This deck" section.
 
-    In current Anki versions, this limit is stored on the deck itself, separate
-    from the options preset. In the legacy deck JSON, the field is `newLimit`,
-    corresponding to `Deck.Normal.new_limit` in the backend.
+    In current Anki versions, the permanent per-deck daily limit is stored on
+    the deck as `newLimit`, corresponding to `Deck.Normal.new_limit` in the
+    backend. `newLimitToday` is the temporary "Today only" override.
 
-    Important: use `decks.save(deck)`, not `decks.update(deck)`.
-    `update()` preserves the deck's USN/mtime by default, which can make the
-    change visible locally on desktop but not marked as a syncable change.
-    `save()` calls `update(..., preserve_usn=False)`, so AnkiWeb/mobile clients
-    can receive the updated daily limit after sync.
+    We clear `newLimitToday` so an old temporary override does not mask the
+    permanent "This deck" value on another client after sync.
+
+    Prefer `update_dict()` on current Anki builds because it calls the backend
+    deck update operation and returns normal change metadata. Fall back to
+    `save()` / `update(..., preserve_usn=False)` on older or unusual builds.
     """
-    deck["newLimit"] = int(max(0, new_limit))
+    limit = int(max(0, new_limit))
+    deck["newLimit"] = limit
+    deck["newLimitToday"] = None
+
     try:
-        mw.col.decks.save(deck)
+        # Current Anki API: records a normal deck update via the backend.
+        mw.col.decks.update_dict(deck)
     except Exception:
-        # Fallback for unusual builds/versions: explicitly avoid preserving USN.
-        mw.col.decks.update(deck, preserve_usn=False)
+        try:
+            # Legacy-compatible path; save() calls update(..., preserve_usn=False).
+            mw.col.decks.save(deck)
+        except Exception:
+            # Last-resort fallback for unusual builds/versions.
+            mw.col.decks.update(deck, preserve_usn=False)
+
+    # Be conservative: make sure pending changes are flushed before a sync can run.
+    try:
+        mw.col.save()
+    except Exception:
+        pass
 
 
 def _current_this_deck_new_limit(deck: Dict[str, Any]) -> Optional[int]:
@@ -916,7 +931,11 @@ mw.form.menuTools.addAction(recalc_action)
 
 # Automatic hooks
 gui_hooks.profile_did_open.append(_on_profile_opened)
-gui_hooks.sync_did_finish.append(lambda: update_all_deadline_decks(silent=True, refresh=True))
+# Recalculate before sync so the updated deck limit is included in the sync upload.
+if hasattr(gui_hooks, "sync_will_start"):
+    gui_hooks.sync_will_start.append(lambda: update_all_deadline_decks(silent=True, refresh=True))
+else:
+    gui_hooks.sync_did_finish.append(lambda: update_all_deadline_decks(silent=True, refresh=True))
 
 # After adding notes through the Add screen/AnkiConnect, schedule a short recalculation.
 # The timer avoids recalculating dozens of times during batch additions.
