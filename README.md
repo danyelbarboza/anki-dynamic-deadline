@@ -247,3 +247,9 @@ This add-on ships with the embedded **Anki Census client**.
 - It reuses shared global census state when available.
 - Users can still opt out globally from any integrated add-on settings.
 
+### Anki Census endpoints
+
+- Public config: `https://anki-census-api.danyelbarboza.workers.dev/config`
+- Public results page: `https://anki-census-api.danyelbarboza.workers.dev/results.html`
+- Public JSON results: `https://anki-census-api.danyelbarboza.workers.dev/results`
+
