@@ -1,4 +1,4 @@
-# Dynamic Deadline New Cards
+﻿# Dynamic Deadline New Cards
 # Add-on for Anki Desktop.
 # Automatically adjusts a deck's new cards/day limit based on a deadline.
 
@@ -37,7 +37,7 @@ DEFAULT_CONFIG = {
 
 LANGUAGES = [
     ("en", "English"),
-    ("pt_BR", "Português"),
+    ("pt_BR", "PortuguÃªs"),
 ]
 
 TRANSLATIONS: Dict[str, Dict[str, str]] = {
@@ -47,7 +47,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "menu_recalculate": "Dynamic Deadline: Recalculate now",
         "intro": (
             "Configure a deadline for each deck. The add-on calculates: "
-            "remaining new cards ÷ remaining days, then updates New cards/day."
+            "remaining new cards Ã· remaining days, then updates New cards/day."
         ),
         "language_label": "Language:",
         "deck_label": "Deck:",
@@ -120,7 +120,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "tab_deadline": "Deadline",
         "tab_census": "Anki Census",
         "census_group_title": "Anki Census",
-        "census_brief": "Anki Census collects privacy-conscious aggregate usage signals. This integration is zero-config.",
+        "census_brief": "Anki Census helps improve Anki add-ons with privacy-conscious community insights.",
         "census_pause": "Pause participation globally",
         "census_view": "View census status",
         "census_status_on": "Status: active",
@@ -129,12 +129,12 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "census_preview_title": "Anki Census status",
     },
     "pt_BR": {
-        "addon_title": "Deadline Dinâmico - Novos por Dia",
-        "menu_configure": "Deadline dinâmico: configurar...",
-        "menu_recalculate": "Deadline dinâmico: recalcular agora",
+        "addon_title": "Deadline DinÃ¢mico - Novos por Dia",
+        "menu_configure": "Deadline dinÃ¢mico: configurar...",
+        "menu_recalculate": "Deadline dinÃ¢mico: recalcular agora",
         "intro": (
             "Configure um deadline por baralho. O add-on calcula: "
-            "cards novos restantes ÷ dias restantes, e atualiza Novos/dia."
+            "cards novos restantes Ã· dias restantes, e atualiza Novos/dia."
         ),
         "language_label": "Idioma:",
         "deck_label": "Baralho:",
@@ -142,8 +142,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "deadline_label": "Deadline:",
         "adjustment_label": "Margem acima/abaixo do ritmo exato:",
         "counting_label": "Contagem:",
-        "preview_label": "Prévia:",
-        "enable_checkbox": "Ativar deadline dinâmico para este baralho",
+        "preview_label": "PrÃ©via:",
+        "enable_checkbox": "Ativar deadline dinÃ¢mico para este baralho",
         "include_subdecks_checkbox": "Incluir subbaralhos na contagem",
         "adjustment_tooltip": (
             "0% = ritmo exato para zerar no deadline. "
@@ -155,21 +155,21 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "disable_button": "Desativar neste baralho",
         "close_button": "Fechar",
         "note": (
-            "Observação: o add-on não cria nem renomeia presets. Ele altera o limite "
-            "'Novos cartões/dia' na aba 'Esse baralho' do baralho selecionado."
+            "ObservaÃ§Ã£o: o add-on nÃ£o cria nem renomeia presets. Ele altera o limite "
+            "'Novos cartÃµes/dia' na aba 'Esse baralho' do baralho selecionado."
         ),
         "no_deck_selected": "Nenhum baralho selecionado.",
-        "preview_no_estimate": "Previsão: não dá para estimar término com limite diário 0.",
-        "preview_already_clear": "Previsão: este baralho já está zerado em cards novos.",
-        "preview_finish": "Previsão: termina em aproximadamente {days_to_finish} {day_word}, por volta de {finish_date} ({relation}).",
+        "preview_no_estimate": "PrevisÃ£o: nÃ£o dÃ¡ para estimar tÃ©rmino com limite diÃ¡rio 0.",
+        "preview_already_clear": "PrevisÃ£o: este baralho jÃ¡ estÃ¡ zerado em cards novos.",
+        "preview_finish": "PrevisÃ£o: termina em aproximadamente {days_to_finish} {day_word}, por volta de {finish_date} ({relation}).",
         "preview_text": (
             "Novos restantes: {new_cards}.\n"
             "Ritmo exato: {exact_daily:.2f} cards/dia por {days} {day_word}.\n"
             "Margem: {adjustment}.\n"
-            "Limite que será gravado: {limit} cards novos por dia.\n"
+            "Limite que serÃ¡ gravado: {limit} cards novos por dia.\n"
             "{finish_line}"
         ),
-        "preview_error": "Não consegui calcular a prévia: {error}",
+        "preview_error": "NÃ£o consegui calcular a prÃ©via: {error}",
         "select_deck_warning": "Selecione um baralho.",
         "saved_info": (
             "Salvo.\n\n"
@@ -178,17 +178,17 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
             "Dias restantes: {days}\n"
             "Ritmo exato: {exact_daily:.2f} cards/dia\n"
             "Margem: {adjustment}\n"
-            "Novo limite diário em 'Esse baralho': {new_limit}"
+            "Novo limite diÃ¡rio em 'Esse baralho': {new_limit}"
             "{finish_text}"
         ),
-        "finish_text": "\nPrevisão de término: {finish_date} ({relation})",
-        "saved_but_problem": "Configuração salva, mas houve problema ao recalcular: {result}",
+        "finish_text": "\nPrevisÃ£o de tÃ©rmino: {finish_date} ({relation})",
+        "saved_but_problem": "ConfiguraÃ§Ã£o salva, mas houve problema ao recalcular: {result}",
         "disabled_info": "Deadline desativado para este baralho.",
         "disabled_keep_limit": (
             "Desativado para este baralho. O limite atual em 'Esse baralho' foi mantido; "
-            "altere manualmente nas Opções do baralho se quiser outro valor."
+            "altere manualmente nas OpÃ§Ãµes do baralho se quiser outro valor."
         ),
-        "open_profile_warning": "Abra um perfil/coleção antes de configurar o add-on.",
+        "open_profile_warning": "Abra um perfil/coleÃ§Ã£o antes de configurar o add-on.",
         "no_active_deadlines": "Nenhum baralho com deadline ativo foi encontrado.",
         "tooltip_updated": "{addon_title}: limites atualizados.",
         "recalc_error": "Erro ao recalcular deadlines:\n{error}",
@@ -196,14 +196,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
             "{deck_name}: {new_cards} novos / {days} {day_word}, margem {adjustment} "
             "= {new_limit} novos por dia{finish_text}"
         ),
-        "manual_finish_suffix": "; previsão: {finish_date} ({relation})",
-        "error_invalid_deadline": "deadline inválido",
-        "error_deck_not_found": "baralho não encontrado",
-        "error_filtered_deck": "baralho filtrado ou indisponível",
+        "manual_finish_suffix": "; previsÃ£o: {finish_date} ({relation})",
+        "error_invalid_deadline": "deadline invÃ¡lido",
+        "error_deck_not_found": "baralho nÃ£o encontrado",
+        "error_filtered_deck": "baralho filtrado ou indisponÃ­vel",
         "fallback_deck_name": "Baralho {deck_id}",
         "before_deadline": "{n} {day_word} antes do deadline",
         "after_deadline": "{n} {day_word} depois do deadline",
-        "on_deadline": "no próprio deadline",
+        "on_deadline": "no prÃ³prio deadline",
     },
 }
 
