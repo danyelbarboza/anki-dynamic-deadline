@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 from copy import deepcopy
 from datetime import date, datetime
@@ -116,6 +117,14 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "before_deadline": "{n} {day_word} before the deadline",
         "after_deadline": "{n} {day_word} after the deadline",
         "on_deadline": "on the deadline",
+        "census_group_title": "Anki Census",
+        "census_brief": "Anki Census collects privacy-conscious aggregate usage signals. This integration is zero-config.",
+        "census_pause": "Pause participation globally",
+        "census_view": "View census status",
+        "census_status_on": "Status: active",
+        "census_status_off": "Status: paused",
+        "census_status_unavailable": "Status: embedded client unavailable",
+        "census_preview_title": "Anki Census status",
     },
     "pt_BR": {
         "addon_title": "Deadline Dinâmico - Novos por Dia",
@@ -688,6 +697,20 @@ class DeadlineDialog(QDialog):
 
         layout.addLayout(self.form)
 
+        self.census_group = QGroupBox("")
+        census_layout = QVBoxLayout(self.census_group)
+        self.census_brief_label = QLabel("")
+        self.census_brief_label.setWordWrap(True)
+        self.census_pause_checkbox = QCheckBox("")
+        self.census_status_label = QLabel("")
+        self.census_view_button = QPushButton("")
+        qconnect(self.census_view_button.clicked, self._show_census_status)
+        census_layout.addWidget(self.census_brief_label)
+        census_layout.addWidget(self.census_pause_checkbox)
+        census_layout.addWidget(self.census_status_label)
+        census_layout.addWidget(self.census_view_button)
+        layout.addWidget(self.census_group)
+
         button_row = QHBoxLayout()
         self.save_button = QPushButton("")
         self.recalc_button = QPushButton("")
@@ -726,14 +749,65 @@ class DeadlineDialog(QDialog):
         self.disable_button.setText(self._tr("disable_button"))
         self.close_button.setText(self._tr("close_button"))
         self.note_label.setText(self._tr("note"))
+        self.census_group.setTitle(self._tr("census_group_title"))
+        self.census_brief_label.setText(self._tr("census_brief"))
+        self.census_pause_checkbox.setText(self._tr("census_pause"))
+        self.census_view_button.setText(self._tr("census_view"))
+        self._refresh_census_controls()
 
     def _on_language_changed(self, *_args: Any) -> None:
         self.cfg = _load_config()
         self.cfg["language"] = self._lang()
+        self._save_census_settings()
         _save_config(self.cfg)
         self._set_static_texts()
         _refresh_menu_texts(self.cfg)
         self._update_preview()
+        self._refresh_census_controls()
+
+
+    def _refresh_census_controls(self) -> None:
+        """Refresh census control state and status label."""
+        if _censo_client is None:
+            self.census_pause_checkbox.setChecked(False)
+            self.census_pause_checkbox.setEnabled(False)
+            self.census_view_button.setEnabled(False)
+            self.census_status_label.setText(self._tr("census_status_unavailable"))
+            return
+
+        self.census_pause_checkbox.setEnabled(True)
+        self.census_view_button.setEnabled(True)
+        paused = bool(_censo_client.is_participation_paused())
+        self.census_pause_checkbox.setChecked(paused)
+        self.census_status_label.setText(self._tr("census_status_off") if paused else self._tr("census_status_on"))
+
+    def _save_census_settings(self) -> None:
+        """Persist global census opt-out based on the local checkbox."""
+        if _censo_client is None:
+            return
+        try:
+            _censo_client.set_participation_paused(bool(self.census_pause_checkbox.isChecked()))
+        except Exception:
+            pass
+
+    def _show_census_status(self) -> None:
+        """Show a compact census status dialog with summary and payload preview."""
+        if _censo_client is None:
+            showWarning(self._tr("census_status_unavailable"), title=self._tr("census_preview_title"))
+            return
+
+        try:
+            summary = _censo_client.get_privacy_summary()
+            preview = _censo_client.get_current_payload_preview()
+            payload = {
+                "participation_paused": bool(_censo_client.is_participation_paused()),
+                "summary": summary,
+                "payload_preview": preview,
+            }
+            showInfo(json.dumps(payload, ensure_ascii=False, indent=2), title=self._tr("census_preview_title"))
+            self._refresh_census_controls()
+        except Exception as exc:
+            showWarning(str(exc), title=self._tr("census_preview_title"))
 
     def _populate_decks(self) -> None:
         self.deck_combo.clear()
