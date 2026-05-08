@@ -238,3 +238,12 @@ If reporting a bug, please include:
 - Percentage margin
 - Estimated finish preview
 - English and Portuguese interface
+
+## Telemetry
+
+This add-on ships with the embedded **Anki Census client**.
+
+- No user setup is required (zero-config).
+- It reuses shared global census state when available.
+- Users can still opt out globally from any integrated add-on settings.
+
