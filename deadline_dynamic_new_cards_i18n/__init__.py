@@ -213,8 +213,21 @@ _updating_now = False
 setup_action: Optional[QAction] = None
 recalc_action: Optional[QAction] = None
 
-# Initialize embedded Anki Census client in a fail-safe way.
-if init_censo_client is not None:
+# Keep the embedded Anki Census client lazy-initialized.
+# Initializing at import time can fail before Anki profile/collection is ready.
+_censo_client = None
+
+
+def _get_censo_client():
+    """Return the embedded Anki Census client, initializing lazily when needed."""
+    global _censo_client
+
+    if _censo_client is not None:
+        return _censo_client
+
+    if init_censo_client is None:
+        return None
+
     try:
         _censo_client = init_censo_client(
             source_addon_id="anki-dynamic-deadline",
@@ -223,8 +236,8 @@ if init_censo_client is not None:
         )
     except Exception:
         _censo_client = None
-else:
-    _censo_client = None
+
+    return _censo_client
 
 
 def _col_available() -> bool:
@@ -783,7 +796,8 @@ class DeadlineDialog(QDialog):
 
     def _refresh_census_controls(self) -> None:
         """Refresh census control state and status label."""
-        if _censo_client is None:
+        client = _get_censo_client()
+        if client is None:
             self.census_pause_checkbox.setChecked(False)
             self.census_pause_checkbox.setEnabled(False)
             self.census_view_button.setEnabled(False)
@@ -792,22 +806,24 @@ class DeadlineDialog(QDialog):
 
         self.census_pause_checkbox.setEnabled(True)
         self.census_view_button.setEnabled(True)
-        paused = bool(_censo_client.is_participation_paused())
+        paused = bool(client.is_participation_paused())
         self.census_pause_checkbox.setChecked(paused)
         self.census_status_label.setText(self._tr("census_status_off") if paused else self._tr("census_status_on"))
 
     def _save_census_settings(self) -> None:
         """Persist global census opt-out based on the local checkbox."""
-        if _censo_client is None:
+        client = _get_censo_client()
+        if client is None:
             return
         try:
-            _censo_client.set_participation_paused(bool(self.census_pause_checkbox.isChecked()))
+            client.set_participation_paused(bool(self.census_pause_checkbox.isChecked()))
         except Exception:
             pass
 
     def _show_census_status(self) -> None:
         """Show a compact census status dialog with summary and payload preview."""
-        if _censo_client is None:
+        client = _get_censo_client()
+        if client is None:
             showWarning(self._tr("census_status_unavailable"), title=self._tr("census_preview_title"))
             return
 
@@ -815,7 +831,7 @@ class DeadlineDialog(QDialog):
             summary = _censo_client.get_privacy_summary()
             preview = _censo_client.get_current_payload_preview()
             payload = {
-                "participation_paused": bool(_censo_client.is_participation_paused()),
+                "participation_paused": bool(client.is_participation_paused()),
                 "summary": summary,
                 "payload_preview": preview,
             }
