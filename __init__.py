@@ -117,6 +117,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "before_deadline": "{n} {day_word} before the deadline",
         "after_deadline": "{n} {day_word} after the deadline",
         "on_deadline": "on the deadline",
+        "tab_deadline": "Deadline",
+        "tab_census": "Anki Census",
         "census_group_title": "Anki Census",
         "census_brief": "Anki Census collects privacy-conscious aggregate usage signals. This integration is zero-config.",
         "census_pause": "Pause participation globally",
@@ -645,12 +647,18 @@ class DeadlineDialog(QDialog):
         self.form.addRow(label, widget)
 
     def _setup_ui(self) -> None:
-        self.setMinimumWidth(600)
+        self.setMinimumWidth(680)
         layout = QVBoxLayout()
+
+        self.tabs = QTabWidget()
+
+        # Deadline tab
+        self.deadline_tab = QWidget()
+        deadline_layout = QVBoxLayout(self.deadline_tab)
 
         self.intro_label = QLabel("")
         self.intro_label.setWordWrap(True)
-        layout.addWidget(self.intro_label)
+        deadline_layout.addWidget(self.intro_label)
 
         self.form = QFormLayout()
 
@@ -695,21 +703,31 @@ class DeadlineDialog(QDialog):
         self.preview_label.setWordWrap(True)
         self._add_form_row("preview_label", self.preview_label)
 
-        layout.addLayout(self.form)
+        deadline_layout.addLayout(self.form)
 
-        self.census_group = QGroupBox("")
-        census_layout = QVBoxLayout(self.census_group)
+        self.note_label = QLabel("")
+        self.note_label.setWordWrap(True)
+        deadline_layout.addWidget(self.note_label)
+
+        # Census tab
+        self.census_tab = QWidget()
+        census_layout = QVBoxLayout(self.census_tab)
         self.census_brief_label = QLabel("")
         self.census_brief_label.setWordWrap(True)
         self.census_pause_checkbox = QCheckBox("")
         self.census_status_label = QLabel("")
         self.census_view_button = QPushButton("")
         qconnect(self.census_view_button.clicked, self._show_census_status)
+
         census_layout.addWidget(self.census_brief_label)
         census_layout.addWidget(self.census_pause_checkbox)
         census_layout.addWidget(self.census_status_label)
         census_layout.addWidget(self.census_view_button)
-        layout.addWidget(self.census_group)
+        census_layout.addStretch(1)
+
+        self.tabs.addTab(self.deadline_tab, "")
+        self.tabs.addTab(self.census_tab, "")
+        layout.addWidget(self.tabs)
 
         button_row = QHBoxLayout()
         self.save_button = QPushButton("")
@@ -729,10 +747,6 @@ class DeadlineDialog(QDialog):
         button_row.addWidget(self.close_button)
         layout.addLayout(button_row)
 
-        self.note_label = QLabel("")
-        self.note_label.setWordWrap(True)
-        layout.addWidget(self.note_label)
-
         self.setLayout(layout)
         qconnect(self.language_combo.currentIndexChanged, self._on_language_changed)
 
@@ -749,7 +763,8 @@ class DeadlineDialog(QDialog):
         self.disable_button.setText(self._tr("disable_button"))
         self.close_button.setText(self._tr("close_button"))
         self.note_label.setText(self._tr("note"))
-        self.census_group.setTitle(self._tr("census_group_title"))
+        self.tabs.setTabText(0, self._tr("tab_deadline"))
+        self.tabs.setTabText(1, self._tr("tab_census"))
         self.census_brief_label.setText(self._tr("census_brief"))
         self.census_pause_checkbox.setText(self._tr("census_pause"))
         self.census_view_button.setText(self._tr("census_view"))
