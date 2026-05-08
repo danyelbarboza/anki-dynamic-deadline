@@ -15,10 +15,13 @@ from aqt import gui_hooks, mw
 from aqt.qt import *
 from aqt.utils import qconnect, showInfo, showWarning, tooltip
 
+_censo_client_error = ""
+
 try:
     from .censo_client import init_censo_client
-except Exception:
+except Exception as exc:
     init_censo_client = None
+    _censo_client_error = str(exc)
 
 try:
     from anki import hooks as anki_hooks
@@ -127,6 +130,22 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "census_status_off": "Status: paused",
         "census_status_unavailable": "Status: embedded client unavailable",
         "census_preview_title": "Anki Census status",
+        "census_developer_area": "Developer area:",
+        "census_password_placeholder": "4-digit password",
+        "census_unlock": "Unlock",
+        "census_wrong_password_title": "Wrong password",
+        "census_wrong_password_text": "Developer password is incorrect.",
+        "census_view_json": "View JSON",
+        "census_copy_json": "Copy JSON",
+        "census_save_json": "Save JSON",
+        "census_send_test": "Send test",
+        "census_reset_state": "Reset local submission state",
+        "census_save_json_title": "Save JSON",
+        "census_save_json_default": "anki-census-dev.json",
+        "census_debug_sent_title": "Test sent",
+        "census_debug_error_title": "Debug submit error",
+        "census_reset_done_title": "Reset complete",
+        "census_reset_done_text": "Local submission state has been reset.",
     },
     "pt_BR": {
         "addon_title": "Deadline DinÃ¢mico - Novos por Dia",
@@ -220,12 +239,14 @@ _censo_client = None
 
 def _get_censo_client():
     """Return the embedded Anki Census client, initializing lazily when needed."""
-    global _censo_client
+    global _censo_client, _censo_client_error
 
     if _censo_client is not None:
         return _censo_client
 
     if init_censo_client is None:
+        if not _censo_client_error:
+            _censo_client_error = "init function is unavailable"
         return None
 
     try:
@@ -234,8 +255,9 @@ def _get_censo_client():
             source_addon_name="Dynamic Deadline New Cards",
             source_addon_version="0.0.0",
         )
-    except Exception:
+    except Exception as exc:
         _censo_client = None
+        _censo_client_error = str(exc)
 
     return _censo_client
 
@@ -731,11 +753,49 @@ class DeadlineDialog(QDialog):
         self.census_status_label = QLabel("")
         self.census_view_button = QPushButton("")
         qconnect(self.census_view_button.clicked, self._show_census_status)
+        self.census_debug_unlocked = False
+        self.census_dev_password = QLineEdit()
+        self.census_dev_password.setEchoMode(QLineEdit.EchoMode.Password)
+        self.census_unlock_button = QPushButton("")
+        qconnect(self.census_unlock_button.clicked, self._unlock_census_debug)
+        self.census_debug_text = QTextEdit()
+        self.census_debug_text.setReadOnly(True)
+        self.census_debug_text.setEnabled(False)
+        self.census_debug_view_button = QPushButton("")
+        self.census_debug_copy_button = QPushButton("")
+        self.census_debug_save_button = QPushButton("")
+        self.census_debug_send_button = QPushButton("")
+        self.census_debug_reset_button = QPushButton("")
+        qconnect(self.census_debug_view_button.clicked, self._refresh_census_debug_json)
+        qconnect(self.census_debug_copy_button.clicked, lambda: QApplication.clipboard().setText(self.census_debug_text.toPlainText()))
+        qconnect(self.census_debug_save_button.clicked, self._save_census_debug_json)
+        qconnect(self.census_debug_send_button.clicked, self._send_census_debug_payload)
+        qconnect(self.census_debug_reset_button.clicked, self._reset_census_debug_state)
 
         census_layout.addWidget(self.census_brief_label)
         census_layout.addWidget(self.census_pause_checkbox)
         census_layout.addWidget(self.census_status_label)
         census_layout.addWidget(self.census_view_button)
+        debug_row = QHBoxLayout()
+        self.census_dev_label = QLabel("")
+        debug_row.addWidget(self.census_dev_label)
+        debug_row.addWidget(self.census_dev_password)
+        debug_row.addWidget(self.census_unlock_button)
+        debug_row.addStretch(1)
+        census_layout.addLayout(debug_row)
+        census_layout.addWidget(self.census_debug_text)
+        debug_buttons = QHBoxLayout()
+        for button in [
+            self.census_debug_view_button,
+            self.census_debug_copy_button,
+            self.census_debug_save_button,
+            self.census_debug_send_button,
+            self.census_debug_reset_button,
+        ]:
+            button.setEnabled(False)
+            debug_buttons.addWidget(button)
+        debug_buttons.addStretch(1)
+        census_layout.addLayout(debug_buttons)
         census_layout.addStretch(1)
 
         self.tabs.addTab(self.deadline_tab, "")
@@ -781,6 +841,14 @@ class DeadlineDialog(QDialog):
         self.census_brief_label.setText(self._tr("census_brief"))
         self.census_pause_checkbox.setText(self._tr("census_pause"))
         self.census_view_button.setText(self._tr("census_view"))
+        self.census_dev_label.setText(self._tr("census_developer_area"))
+        self.census_dev_password.setPlaceholderText(self._tr("census_password_placeholder"))
+        self.census_unlock_button.setText(self._tr("census_unlock"))
+        self.census_debug_view_button.setText(self._tr("census_view_json"))
+        self.census_debug_copy_button.setText(self._tr("census_copy_json"))
+        self.census_debug_save_button.setText(self._tr("census_save_json"))
+        self.census_debug_send_button.setText(self._tr("census_send_test"))
+        self.census_debug_reset_button.setText(self._tr("census_reset_state"))
         self._refresh_census_controls()
 
     def _on_language_changed(self, *_args: Any) -> None:
@@ -801,11 +869,27 @@ class DeadlineDialog(QDialog):
             self.census_pause_checkbox.setChecked(False)
             self.census_pause_checkbox.setEnabled(False)
             self.census_view_button.setEnabled(False)
-            self.census_status_label.setText(self._tr("census_status_unavailable"))
+            self.census_unlock_button.setEnabled(False)
+            self.census_dev_password.setEnabled(False)
+            self.census_debug_text.setEnabled(False)
+            for button in [
+                self.census_debug_view_button,
+                self.census_debug_copy_button,
+                self.census_debug_save_button,
+                self.census_debug_send_button,
+                self.census_debug_reset_button,
+            ]:
+                button.setEnabled(False)
+            status_text = self._tr("census_status_unavailable")
+            if _censo_client_error:
+                status_text = f"{status_text} ({_censo_client_error})"
+            self.census_status_label.setText(status_text)
             return
 
         self.census_pause_checkbox.setEnabled(True)
         self.census_view_button.setEnabled(True)
+        self.census_unlock_button.setEnabled(True)
+        self.census_dev_password.setEnabled(True)
         paused = bool(client.is_participation_paused())
         self.census_pause_checkbox.setChecked(paused)
         self.census_status_label.setText(self._tr("census_status_off") if paused else self._tr("census_status_on"))
@@ -824,12 +908,15 @@ class DeadlineDialog(QDialog):
         """Show a compact census status dialog with summary and payload preview."""
         client = _get_censo_client()
         if client is None:
-            showWarning(self._tr("census_status_unavailable"), title=self._tr("census_preview_title"))
+            error_text = self._tr("census_status_unavailable")
+            if _censo_client_error:
+                error_text = f"{error_text}\n\nError: {_censo_client_error}"
+            showWarning(error_text, title=self._tr("census_preview_title"))
             return
 
         try:
-            summary = _censo_client.get_privacy_summary()
-            preview = _censo_client.get_current_payload_preview()
+            summary = client.get_privacy_summary()
+            preview = client.get_current_survey_payload()
             payload = {
                 "participation_paused": bool(client.is_participation_paused()),
                 "summary": summary,
@@ -839,6 +926,66 @@ class DeadlineDialog(QDialog):
             self._refresh_census_controls()
         except Exception as exc:
             showWarning(str(exc), title=self._tr("census_preview_title"))
+
+    def _unlock_census_debug(self) -> None:
+        """Unlock embedded census debug actions using the same password as standalone."""
+        if self.census_dev_password.text().strip() != "4599":
+            showWarning(self._tr("census_wrong_password_text"), title=self._tr("census_wrong_password_title"))
+            return
+
+        self.census_debug_unlocked = True
+        self.census_debug_text.setEnabled(True)
+        for button in [
+            self.census_debug_view_button,
+            self.census_debug_copy_button,
+            self.census_debug_save_button,
+            self.census_debug_send_button,
+            self.census_debug_reset_button,
+        ]:
+            button.setEnabled(True)
+        self._refresh_census_debug_json()
+
+    def _refresh_census_debug_json(self) -> None:
+        """Render the current full census payload JSON in the debug text area."""
+        if not self.census_debug_unlocked:
+            return
+        client = _get_censo_client()
+        if client is None:
+            return
+        payload = client.get_current_survey_payload()
+        self.census_debug_text.setPlainText(json.dumps(payload, ensure_ascii=False, indent=2))
+
+    def _save_census_debug_json(self) -> None:
+        """Save the rendered census debug JSON to a user-selected file."""
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            self._tr("census_save_json_title"),
+            self._tr("census_save_json_default"),
+            "JSON (*.json)",
+        )
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(self.census_debug_text.toPlainText())
+
+    def _send_census_debug_payload(self) -> None:
+        """Send the current census debug payload to the debug endpoint and show server response."""
+        client = _get_censo_client()
+        if client is None:
+            return
+        try:
+            result = client.send_debug_payload()
+            showInfo(json.dumps(result, ensure_ascii=False, indent=2), title=self._tr("census_debug_sent_title"))
+        except Exception as exc:
+            showWarning(str(exc), title=self._tr("census_debug_error_title"))
+
+    def _reset_census_debug_state(self) -> None:
+        """Reset local census submission markers so debug submission can be retested."""
+        client = _get_censo_client()
+        if client is None:
+            return
+        client.reset_local_submission_state()
+        showInfo(self._tr("census_reset_done_text"), title=self._tr("census_reset_done_title"))
 
     def _populate_decks(self) -> None:
         self.deck_combo.clear()
